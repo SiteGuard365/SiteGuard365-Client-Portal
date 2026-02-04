@@ -64,6 +64,9 @@ final class SG365_CP_Metaboxes {
         wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
         $user_id = (int) get_post_meta( $post->ID, '_sg365_user_id', true );
         $phone = (string) get_post_meta( $post->ID, '_sg365_phone', true );
+        $plan_type = (string) get_post_meta( $post->ID, '_sg365_plan_type', true );
+        $staff_ids = (array) get_post_meta( $post->ID, '_sg365_staff_ids', true );
+        $staff = get_posts( array( 'post_type' => 'sg365_staff', 'numberposts' => 200, 'orderby' => 'title', 'order' => 'ASC' ) );
         echo '<p><strong>' . esc_html__( 'Linked User', 'sg365-client-portal' ) . '</strong></p>';
         $users = get_users( array( 'fields'=>array('ID','user_login','user_email') ) );
         echo '<select class="widefat" name="_sg365_user_id"><option value="0">' . esc_html__( '— Select user —','sg365-client-portal') . '</option>';
@@ -73,6 +76,24 @@ final class SG365_CP_Metaboxes {
         echo '</select>';
         echo '<p><strong>' . esc_html__( 'Phone', 'sg365-client-portal' ) . '</strong></p>';
         echo '<input class="widefat" name="_sg365_phone" value="' . esc_attr($phone) . '" />';
+        echo '<p><strong>' . esc_html__( 'Plan Type', 'sg365-client-portal' ) . '</strong></p>';
+        $plans = array(
+            'salary'      => __( 'Salary-based plan', 'sg365-client-portal' ),
+            'project'     => __( 'Project-based plan', 'sg365-client-portal' ),
+            'maintenance' => __( 'Maintenance plan', 'sg365-client-portal' ),
+        );
+        echo '<select class="widefat" name="_sg365_plan_type">';
+        foreach ( $plans as $key => $label ) {
+            printf( '<option value="%s"%s>%s</option>', esc_attr( $key ), selected( $plan_type, $key, false ), esc_html( $label ) );
+        }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Assigned Staff (reporting only)', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_staff_ids[]" multiple>';
+        foreach ( $staff as $member ) {
+            $selected = in_array( $member->ID, $staff_ids, true ) ? 'selected' : '';
+            printf( '<option value="%d" %s>%s</option>', (int) $member->ID, $selected, esc_html( $member->post_title ) );
+        }
+        echo '</select>';
     }
 
     public function site_box( WP_Post $post ): void {
@@ -80,17 +101,41 @@ final class SG365_CP_Metaboxes {
         $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
         $type = (string) get_post_meta( $post->ID, '_sg365_type', true );
         $plan = (string) get_post_meta( $post->ID, '_sg365_plan', true );
+        $next_update = (string) get_post_meta( $post->ID, '_sg365_next_update', true );
+        $services = (array) get_post_meta( $post->ID, '_sg365_services', true );
+        $staff_ids = (array) get_post_meta( $post->ID, '_sg365_staff_ids', true );
+        $service_types = sg365_cp_get_service_types();
+        $staff = get_posts( array( 'post_type' => 'sg365_staff', 'numberposts' => 200, 'orderby' => 'title', 'order' => 'ASC' ) );
         echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
         $this->clients($client_id);
         echo '<p><strong>' . esc_html__( 'Service Type', 'sg365-client-portal' ) . '</strong></p>';
-        $types = array('maintenance'=>'Maintenance','development'=>'Development','security'=>'Security','seo'=>'SEO');
+        $types = array();
+        foreach ( $service_types as $item ) {
+            $types[ $item['key'] ] = $item['label'];
+        }
         echo '<select class="widefat" name="_sg365_type">';
         foreach($types as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($type,$k,false), esc_html($lbl)); }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Included Services', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_services[]" multiple>';
+        foreach ( $types as $k => $lbl ) {
+            $selected = in_array( $k, $services, true ) ? 'selected' : '';
+            printf( '<option value="%s" %s>%s</option>', esc_attr( $k ), $selected, esc_html( $lbl ) );
+        }
         echo '</select>';
         echo '<p><strong>' . esc_html__( 'Plan', 'sg365-client-portal' ) . '</strong></p>';
         $plans = array('monthly'=>'Monthly','one_time'=>'One-time');
         echo '<select class="widefat" name="_sg365_plan">';
         foreach($plans as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($plan,$k,false), esc_html($lbl)); }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Next expected update date', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="date" name="_sg365_next_update" value="' . esc_attr( $next_update ) . '" />';
+        echo '<p><strong>' . esc_html__( 'Assigned Staff (reporting only)', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_staff_ids[]" multiple>';
+        foreach ( $staff as $member ) {
+            $selected = in_array( $member->ID, $staff_ids, true ) ? 'selected' : '';
+            printf( '<option value="%d" %s>%s</option>', (int) $member->ID, $selected, esc_html( $member->post_title ) );
+        }
         echo '</select>';
     }
 
@@ -99,6 +144,13 @@ final class SG365_CP_Metaboxes {
         $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
         $ptype = (string) get_post_meta( $post->ID, '_sg365_project_type', true );
         $amount = (string) get_post_meta( $post->ID, '_sg365_amount', true );
+        $progress = (int) get_post_meta( $post->ID, '_sg365_progress', true );
+        $status = (string) get_post_meta( $post->ID, '_sg365_project_status', true );
+        $next_update = (string) get_post_meta( $post->ID, '_sg365_next_update', true );
+        $completed_date = (string) get_post_meta( $post->ID, '_sg365_completed_date', true );
+        $service_types = sg365_cp_get_service_types();
+        $services = (array) get_post_meta( $post->ID, '_sg365_services', true );
+        $assigned_sites = (array) get_post_meta( $post->ID, '_sg365_site_ids', true );
         echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
         $this->clients($client_id);
         echo '<p><strong>' . esc_html__( 'Project Type', 'sg365-client-portal' ) . '</strong></p>';
@@ -106,8 +158,36 @@ final class SG365_CP_Metaboxes {
         echo '<select class="widefat" name="_sg365_project_type">';
         foreach($types as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($ptype,$k,false), esc_html($lbl)); }
         echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Assigned Domains', 'sg365-client-portal' ) . '</strong></p>';
+        $sites = get_posts( array( 'post_type'=>'sg365_site', 'numberposts'=>500, 'orderby'=>'title', 'order'=>'ASC' ) );
+        echo '<select class="widefat" name="_sg365_site_ids[]" multiple>';
+        foreach ( $sites as $site ) {
+            $selected = in_array( $site->ID, $assigned_sites, true ) ? 'selected' : '';
+            printf( '<option value="%d" %s>%s</option>', (int) $site->ID, $selected, esc_html( $site->post_title ) );
+        }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Assigned Service Types', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_services[]" multiple>';
+        foreach ( $service_types as $service ) {
+            $selected = in_array( $service['key'], $services, true ) ? 'selected' : '';
+            printf( '<option value="%s" %s>%s</option>', esc_attr( $service['key'] ), $selected, esc_html( $service['label'] ) );
+        }
+        echo '</select>';
         echo '<p><strong>' . esc_html__( 'Amount (optional)', 'sg365-client-portal' ) . '</strong></p>';
         echo '<input class="widefat" name="_sg365_amount" value="' . esc_attr($amount) . '" placeholder="15000" />';
+        echo '<p><strong>' . esc_html__( 'Progress (0–100)', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="number" min="0" max="100" name="_sg365_progress" value="' . esc_attr( $progress ) . '" />';
+        echo '<p><strong>' . esc_html__( 'Status', 'sg365-client-portal' ) . '</strong></p>';
+        $statuses = array( 'active' => __( 'Active', 'sg365-client-portal' ), 'completed' => __( 'Completed', 'sg365-client-portal' ) );
+        echo '<select class="widefat" name="_sg365_project_status">';
+        foreach ( $statuses as $key => $label ) {
+            printf( '<option value="%s"%s>%s</option>', esc_attr( $key ), selected( $status, $key, false ), esc_html( $label ) );
+        }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Next expected update date', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="date" name="_sg365_next_update" value="' . esc_attr( $next_update ) . '" />';
+        echo '<p><strong>' . esc_html__( 'Completed date', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="date" name="_sg365_completed_date" value="' . esc_attr( $completed_date ) . '" />';
     }
 
     public function worklog_box( WP_Post $post ): void {
@@ -116,15 +196,26 @@ final class SG365_CP_Metaboxes {
         $site_id = (int) get_post_meta( $post->ID, '_sg365_site_id', true );
         $project_id = (int) get_post_meta( $post->ID, '_sg365_project_id', true );
         $cat = (string) get_post_meta( $post->ID, '_sg365_category', true );
+        $service_type = (string) get_post_meta( $post->ID, '_sg365_service_type', true );
         $visible = (int) get_post_meta( $post->ID, '_sg365_visible_client', true );
         $date = (string) get_post_meta( $post->ID, '_sg365_log_date', true );
+        $staff_ids = (array) get_post_meta( $post->ID, '_sg365_staff_ids', true );
+        $attachment_id = (int) get_post_meta( $post->ID, '_sg365_attachment_id', true );
         if(!$date){ $date = current_time('Y-m-d'); }
+        $service_types = sg365_cp_get_service_types();
+        $staff = get_posts( array( 'post_type' => 'sg365_staff', 'numberposts' => 200, 'orderby' => 'title', 'order' => 'ASC' ) );
         echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
         $this->clients($client_id);
         echo '<p><strong>' . esc_html__( 'Domain/Site (required)', 'sg365-client-portal' ) . '</strong></p>';
         $this->sites($site_id, $client_id);
         echo '<p><strong>' . esc_html__( 'Project (optional)', 'sg365-client-portal' ) . '</strong></p>';
         $this->projects($project_id, $client_id);
+        echo '<p><strong>' . esc_html__( 'Service Type', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_service_type">';
+        foreach ( $service_types as $service ) {
+            printf( '<option value="%s"%s>%s</option>', esc_attr( $service['key'] ), selected( $service_type, $service['key'], false ), esc_html( $service['label'] ) );
+        }
+        echo '</select>';
         echo '<p><strong>' . esc_html__( 'Category', 'sg365-client-portal' ) . '</strong></p>';
         $cats = array('development'=>'Development','security'=>'Security','bugfix'=>'Bug Fix','support'=>'Support','seo'=>'SEO','content'=>'Content');
         echo '<select class="widefat" name="_sg365_category">';
@@ -132,6 +223,16 @@ final class SG365_CP_Metaboxes {
         echo '</select>';
         echo '<p><strong>' . esc_html__( 'Date', 'sg365-client-portal' ) . '</strong></p>';
         echo '<input type="date" name="_sg365_log_date" value="' . esc_attr($date) . '" />';
+        echo '<p><strong>' . esc_html__( 'Staff Assigned', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_staff_ids[]" multiple>';
+        foreach ( $staff as $member ) {
+            $selected = in_array( $member->ID, $staff_ids, true ) ? 'selected' : '';
+            printf( '<option value="%d" %s>%s</option>', (int) $member->ID, $selected, esc_html( $member->post_title ) );
+        }
+        echo '</select>';
+        if ( $attachment_id ) {
+            echo '<p>' . esc_html__( 'Attachment:', 'sg365-client-portal' ) . ' <a href="' . esc_url( wp_get_attachment_url( $attachment_id ) ) . '" target="_blank">' . esc_html__( 'View', 'sg365-client-portal' ) . '</a></p>';
+        }
         echo '<p><label><input type="checkbox" name="_sg365_visible_client" value="1" ' . checked(1,$visible,false) . ' /> ' . esc_html__( 'Visible to client in My Account', 'sg365-client-portal' ) . '</label></p>';
     }
 
@@ -150,6 +251,9 @@ final class SG365_CP_Metaboxes {
         $month = (string) get_post_meta( $post->ID, '_sg365_month', true );
         if(!$month){ $month = gmdate('Y-m'); }
         $staff_id = (int) get_post_meta( $post->ID, '_sg365_staff_id', true );
+        $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
+        $direction = (string) get_post_meta( $post->ID, '_sg365_salary_direction', true );
+        $due_date = (string) get_post_meta( $post->ID, '_sg365_due_date', true );
         $base = (string) get_post_meta( $post->ID, '_sg365_base', true );
         $bonus = (string) get_post_meta( $post->ID, '_sg365_bonus', true );
         $ded = (string) get_post_meta( $post->ID, '_sg365_deduction', true );
@@ -157,13 +261,29 @@ final class SG365_CP_Metaboxes {
         $note = (string) get_post_meta( $post->ID, '_sg365_note', true );
 
         $staff = get_posts(array('post_type'=>'sg365_staff','numberposts'=>300,'orderby'=>'title','order'=>'ASC'));
+        $clients = get_posts(array('post_type'=>'sg365_client','numberposts'=>300,'orderby'=>'title','order'=>'ASC'));
 
         echo '<p><strong>' . esc_html__( 'Month', 'sg365-client-portal' ) . '</strong></p>';
         echo '<input type="month" name="_sg365_month" value="' . esc_attr($month) . '" />';
+        echo '<p><strong>' . esc_html__( 'Salary Direction', 'sg365-client-portal' ) . '</strong></p>';
+        $directions = array( 'incoming' => __( 'Incoming (from client)', 'sg365-client-portal' ), 'outgoing' => __( 'Outgoing (to staff)', 'sg365-client-portal' ) );
+        echo '<select class="widefat" name="_sg365_salary_direction">';
+        foreach ( $directions as $key => $label ) {
+            printf( '<option value="%s"%s>%s</option>', esc_attr( $key ), selected( $direction, $key, false ), esc_html( $label ) );
+        }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Client (incoming only)', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_client_id"><option value="0">—</option>';
+        foreach ( $clients as $client ) {
+            printf( '<option value="%d"%s>%s</option>', (int) $client->ID, selected( $client_id, (int) $client->ID, false ), esc_html( $client->post_title ) );
+        }
+        echo '</select>';
         echo '<p><strong>' . esc_html__( 'Staff', 'sg365-client-portal' ) . '</strong></p>';
         echo '<select class="widefat" name="_sg365_staff_id"><option value="0">—</option>';
         foreach($staff as $s){ printf('<option value="%d"%s>%s</option>', (int)$s->ID, selected($staff_id,(int)$s->ID,false), esc_html($s->post_title)); }
         echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Due date', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="date" name="_sg365_due_date" value="' . esc_attr( $due_date ) . '" />';
 
         echo '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px">';
         echo '<div><strong>Base</strong><input class="widefat" name="_sg365_base" value="' . esc_attr($base) . '"/></div>';
@@ -182,12 +302,12 @@ final class SG365_CP_Metaboxes {
         if ( ! current_user_can('sg365_cp_manage') ) { return; }
 
         $map = array(
-            'sg365_client' => array('_sg365_user_id'=>'int','_sg365_phone'=>'text'),
-            'sg365_site' => array('_sg365_client_id'=>'int','_sg365_type'=>'text','_sg365_plan'=>'text'),
-            'sg365_project' => array('_sg365_client_id'=>'int','_sg365_project_type'=>'text','_sg365_amount'=>'money'),
-            'sg365_worklog' => array('_sg365_client_id'=>'int','_sg365_site_id'=>'int','_sg365_project_id'=>'int','_sg365_category'=>'text','_sg365_visible_client'=>'bool','_sg365_log_date'=>'text'),
+            'sg365_client' => array('_sg365_user_id'=>'int','_sg365_phone'=>'text','_sg365_plan_type'=>'text','_sg365_staff_ids'=>'array'),
+            'sg365_site' => array('_sg365_client_id'=>'int','_sg365_type'=>'text','_sg365_plan'=>'text','_sg365_next_update'=>'text','_sg365_services'=>'array','_sg365_staff_ids'=>'array'),
+            'sg365_project' => array('_sg365_client_id'=>'int','_sg365_project_type'=>'text','_sg365_amount'=>'money','_sg365_progress'=>'int','_sg365_project_status'=>'text','_sg365_next_update'=>'text','_sg365_completed_date'=>'text','_sg365_services'=>'array','_sg365_site_ids'=>'array'),
+            'sg365_worklog' => array('_sg365_client_id'=>'int','_sg365_site_id'=>'int','_sg365_project_id'=>'int','_sg365_category'=>'text','_sg365_service_type'=>'text','_sg365_visible_client'=>'bool','_sg365_log_date'=>'text','_sg365_staff_ids'=>'array','_sg365_attachment_id'=>'int'),
             'sg365_staff' => array('_sg365_role'=>'text','_sg365_monthly_salary'=>'money'),
-            'sg365_salary' => array('_sg365_month'=>'text','_sg365_staff_id'=>'int','_sg365_base'=>'money','_sg365_bonus'=>'money','_sg365_deduction'=>'money','_sg365_paid'=>'bool','_sg365_note'=>'text'),
+            'sg365_salary' => array('_sg365_month'=>'text','_sg365_staff_id'=>'int','_sg365_client_id'=>'int','_sg365_salary_direction'=>'text','_sg365_due_date'=>'text','_sg365_base'=>'money','_sg365_bonus'=>'money','_sg365_deduction'=>'money','_sg365_paid'=>'bool','_sg365_note'=>'text'),
         );
 
         if ( empty($map[$post->post_type]) ) { return; }
@@ -197,7 +317,15 @@ final class SG365_CP_Metaboxes {
             if($type==='int'){ update_post_meta($post_id,$key, sg365_cp_clean_int($val)); }
             elseif($type==='bool'){ update_post_meta($post_id,$key, sg365_cp_clean_bool($val)); }
             elseif($type==='money'){ update_post_meta($post_id,$key, sg365_cp_clean_money($val)); }
-            else { update_post_meta($post_id,$key, sg365_cp_clean_text($val)); }
+            elseif($type==='array'){
+                $items = array();
+                if ( is_array( $val ) ) {
+                    foreach ( $val as $item ) {
+                        $items[] = sanitize_text_field( wp_unslash( (string) $item ) );
+                    }
+                }
+                update_post_meta( $post_id, $key, $items );
+            } else { update_post_meta($post_id,$key, sg365_cp_clean_text($val)); }
         }
 
         if ( 'sg365_worklog' === $post->post_type ) {
