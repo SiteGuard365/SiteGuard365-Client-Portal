@@ -14,3 +14,8 @@
 .sg365-list-item{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}
 .sg365-li-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
 .sg365-li-meta{font-size:12px;color:#6b7280}
+.sg365-card-meta{margin-top:8px;font-size:13px;color:#374151}
+.sg365-dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.sg365-progress-bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:8px}
+.sg365-progress-bar span{display:block;height:100%;background:#10b981}
+.sg365-progress-label{font-size:12px;color:#6b7280;margin-top:4px}

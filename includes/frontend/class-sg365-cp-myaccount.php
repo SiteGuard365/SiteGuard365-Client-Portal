@@ -14,6 +14,8 @@ final class SG365_CP_MyAccount {
 
     private function init(): void {
         add_action( 'init', array( $this, 'endpoint' ) );
+        add_filter( 'query_vars', array( $this, 'query_vars' ) );
+        add_filter( 'woocommerce_get_query_vars', array( $this, 'woo_query_vars' ) );
         add_filter( 'woocommerce_account_menu_items', array( $this, 'menu' ) );
         add_action( 'woocommerce_account_sg365-portal_endpoint', array( $this, 'render' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
@@ -24,9 +26,22 @@ final class SG365_CP_MyAccount {
         add_rewrite_endpoint( 'sg365-portal', EP_ROOT | EP_PAGES );
     }
 
+    public function query_vars( array $vars ): array {
+        $vars[] = 'sg365-portal';
+        return $vars;
+    }
+
+    public function woo_query_vars( array $vars ): array {
+        $vars['sg365-portal'] = 'sg365-portal';
+        return $vars;
+    }
+
     public function menu( array $items ): array {
         if ( ! sg365_cp_is_woocommerce_active() ) { return $items; }
         if ( ! (bool) get_option( 'sg365_cp_enable_myaccount', true ) ) { return $items; }
+
+        $client_id = sg365_cp_get_client_id_for_user( get_current_user_id() );
+        $has_work_access = $client_id ? sg365_cp_client_has_work_access( $client_id, get_current_user_id() ) : false;
 
         $label = (string) get_option( 'sg365_cp_portal_label', 'SG365 Portal' );
         $new = array();
@@ -35,6 +50,7 @@ final class SG365_CP_MyAccount {
             if ( 'dashboard' === $k ) { $new['sg365-portal'] = $label; }
         }
         if ( ! isset($new['sg365-portal']) ) { $new['sg365-portal'] = $label; }
+
         return $new;
     }
 
@@ -53,30 +69,37 @@ final class SG365_CP_MyAccount {
             return;
         }
 
-        $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'sites';
-        $allowed = array('sites','logs','projects','payments');
-        if(!in_array($tab,$allowed,true)) $tab='sites';
+        $has_work_access = sg365_cp_client_has_work_access( $client_id, $user_id );
+        $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'dashboard';
+        $allowed = $has_work_access ? array('dashboard','sites','logs','projects','payments') : array('dashboard','sites','payments');
+        if(!in_array($tab,$allowed,true)) $tab='dashboard';
 
         $base = wc_get_account_endpoint_url('sg365-portal');
 
         echo '<div class="sg365-portal"><h3>' . esc_html__('SG365 Client Portal','sg365-client-portal') . '</h3>';
         echo '<div class="sg365-tabs">';
-        $tabs = array('sites'=>__('My Sites','sg365-client-portal'),'logs'=>__('Work Logs','sg365-client-portal'),'projects'=>__('Projects','sg365-client-portal'),'payments'=>__('Payments','sg365-client-portal'));
+        $tabs = array('dashboard'=>__('Dashboard','sg365-client-portal'),'sites'=>__('My Active Sites','sg365-client-portal'));
+        if ( $has_work_access ) {
+            $tabs['logs'] = __('Work Logs','sg365-client-portal');
+            $tabs['projects'] = __('Projects','sg365-client-portal');
+        }
+        $tabs['payments'] = __('Payments','sg365-client-portal');
         foreach($tabs as $k=>$lbl){
             $url = add_query_arg('tab',$k,$base);
             printf('<a class="sg365-tab %s" href="%s">%s</a>', $tab===$k?'is-active':'', esc_url($url), esc_html($lbl));
         }
         echo '</div>';
 
-        if($tab==='sites'){ $this->sites($client_id); }
-        elseif($tab==='logs'){ $this->logs($client_id,$user_id); }
-        elseif($tab==='projects'){ $this->projects($client_id); }
+        if($tab==='dashboard'){ $this->dashboard($client_id, $has_work_access); }
+        elseif($tab==='sites'){ $this->sites($client_id, $has_work_access); }
+        elseif($tab==='logs' && $has_work_access){ $this->logs($client_id,$user_id); }
+        elseif($tab==='projects' && $has_work_access){ $this->projects($client_id); }
         else { $this->payments(); }
 
         echo '</div>';
     }
 
-    private function sites(int $client_id): void {
+    private function sites(int $client_id, bool $has_work_access): void {
         $sites = get_posts(array(
             'post_type'=>'sg365_site',
             'numberposts'=>200,
@@ -84,17 +107,38 @@ final class SG365_CP_MyAccount {
             'order'=>'ASC',
             'meta_query'=>array(array('key'=>'_sg365_client_id','value'=>$client_id)),
         ));
+        $service_type_map = array();
+        foreach ( sg365_cp_get_service_types() as $type ) {
+            $service_type_map[ $type['key'] ] = $type['label'];
+        }
         echo '<div class="sg365-cards">';
         if(!$sites){ echo '<p>'.esc_html__('No sites/domains found yet.','sg365-client-portal').'</p>'; }
         foreach($sites as $s){
             $type = (string) get_post_meta($s->ID,'_sg365_type',true);
             $plan = (string) get_post_meta($s->ID,'_sg365_plan',true);
+            $services = (array) get_post_meta($s->ID,'_sg365_services',true);
+            $next_update = (string) get_post_meta($s->ID,'_sg365_next_update',true);
             echo '<div class="sg365-card">';
             echo '<div class="sg365-card-title">'.esc_html($s->post_title).'</div>';
             echo '<div class="sg365-badges">';
             echo '<span class="sg365-badge">'.esc_html(ucfirst($type)).'</span>';
             echo '<span class="sg365-badge sg365-badge-soft">'.esc_html($plan==='one_time'?__('One-time','sg365-client-portal'):__('Monthly','sg365-client-portal')).'</span>';
             echo '</div></div>';
+            echo '<div class="sg365-card-meta">';
+            if ( $services ) {
+                $labels = array();
+                foreach ( $services as $service ) {
+                    $labels[] = $service_type_map[ $service ] ?? ucfirst( $service );
+                }
+                echo '<p><strong>'.esc_html__('Included services','sg365-client-portal').':</strong> '.esc_html( implode( ', ', $labels ) ).'</p>';
+            }
+            if ( $next_update ) {
+                echo '<p><strong>'.esc_html__('Next expected update','sg365-client-portal').':</strong> '.esc_html( $next_update ).'</p>';
+            }
+            if ( $has_work_access ) {
+                echo '<p><a class="button" href="'.esc_url( add_query_arg( array( 'tab' => 'logs', 'site_id' => $s->ID ), wc_get_account_endpoint_url('sg365-portal') ) ).'">'.esc_html__('View Work Logs','sg365-client-portal').'</a></p>';
+            }
+            echo '</div>';
         }
         echo '</div>';
     }
@@ -135,7 +179,7 @@ final class SG365_CP_MyAccount {
         echo '<div class="sg365-list">';
         foreach($logs as $l){
             $date = (string) get_post_meta($l->ID,'_sg365_log_date',true);
-            $cat  = (string) get_post_meta($l->ID,'_sg365_category',true);
+            $cat  = (string) get_post_meta($l->ID,'_sg365_service_type',true);
             $site_id = (int) get_post_meta($l->ID,'_sg365_site_id',true);
             $site_title = $site_id ? get_the_title($site_id) : '';
             echo '<div class="sg365-list-item">';
@@ -154,10 +198,39 @@ final class SG365_CP_MyAccount {
         foreach($projects as $p){
             $ptype = (string) get_post_meta($p->ID,'_sg365_project_type',true);
             $amount = (string) get_post_meta($p->ID,'_sg365_amount',true);
+            $progress = (int) get_post_meta($p->ID,'_sg365_progress',true);
             echo '<div class="sg365-list-item"><div class="sg365-li-head"><strong>'.esc_html($p->post_title).'</strong>';
             echo '<span class="sg365-li-meta">'.esc_html(strtoupper($ptype)).($amount?' • ₹'.esc_html($amount):'').'</span></div>';
             if($p->post_content){ echo '<div class="sg365-li-body">'.wp_kses_post(wpautop($p->post_content)).'</div>'; }
+            echo '<div class="sg365-progress-bar"><span style="width:'.esc_attr($progress).'%;"></span></div>';
+            echo '<div class="sg365-progress-label">'.esc_html($progress).'%</div>';
             echo '</div>';
+        }
+        echo '</div>';
+    }
+
+    private function dashboard(int $client_id, bool $has_work_access): void {
+        $sites = get_posts(array(
+            'post_type'=>'sg365_site',
+            'numberposts'=>10,
+            'orderby'=>'title',
+            'order'=>'ASC',
+            'meta_query'=>array(array('key'=>'_sg365_client_id','value'=>$client_id)),
+        ));
+        $logs = get_posts(array(
+            'post_type'=>'sg365_worklog',
+            'numberposts'=>5,
+            'orderby'=>'date',
+            'order'=>'DESC',
+            'meta_query'=>array(
+                array('key'=>'_sg365_client_id','value'=>$client_id),
+                array('key'=>'_sg365_visible_client','value'=>1),
+            ),
+        ));
+        echo '<div class="sg365-dashboard-grid">';
+        echo '<div class="sg365-card"><h4>'.esc_html__('Active Sites','sg365-client-portal').'</h4><p>'.esc_html( count( $sites ) ).'</p></div>';
+        if ( $has_work_access ) {
+            echo '<div class="sg365-card"><h4>'.esc_html__('Recent Work Logs','sg365-client-portal').'</h4><p>'.esc_html( count( $logs ) ).'</p></div>';
         }
         echo '</div>';
     }

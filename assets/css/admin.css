@@ -1,4 +1,45 @@
-.sg365-cp-wrap .sg365-cp-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin-top:16px}
-.sg365-cp-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.sg365-cp-card h3{margin:0 0 8px;font-size:14px}
-.sg365-cp-stat{font-size:26px;font-weight:700;margin:0}
+.sg365-dashboard-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+.sg365-tabs-nav{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+.sg365-tab-btn{border:1px solid #e5e7eb;border-radius:999px;padding:6px 14px;background:#fff;cursor:pointer}
+.sg365-tab-btn.is-active{background:#111827;color:#fff;border-color:#111827}
+.sg365-tab-content{min-height:200px}
+.sg365-loading{padding:20px;border:1px dashed #e5e7eb;border-radius:12px;text-align:center;background:#f9fafb}
+.sg365-kpi-grid,.sg365-month-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.sg365-kpi-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer}
+.sg365-kpi-card strong{display:block;font-size:24px;margin-top:6px}
+.sg365-overview-note{margin-top:12px;color:#6b7280}
+.sg365-analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.sg365-analytics-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+.sg365-metric-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.sg365-metric-list li{display:flex;justify-content:space-between;align-items:center}
+.sg365-donut{--size:160px;--thickness:18px;width:var(--size);height:var(--size);border-radius:50%;background:conic-gradient(#2563eb calc(var(--percent) * 1%),#e5e7eb 0);margin:16px auto;display:grid;place-items:center}
+.sg365-donut-center{width:calc(var(--size) - var(--thickness) * 2);height:calc(var(--size) - var(--thickness) * 2);background:#fff;border-radius:50%;display:grid;place-items:center;text-align:center;font-size:12px;padding:8px}
+.sg365-progress-list{display:grid;gap:12px;margin-top:12px}
+.sg365-progress-item{display:grid;grid-template-columns:1fr;gap:6px}
+.sg365-progress-bar{background:#e5e7eb;border-radius:999px;overflow:hidden;height:8px}
+.sg365-progress-bar div{background:#10b981;height:100%}
+.sg365-bar-chart{margin-top:12px;display:grid;gap:8px}
+.sg365-bar{display:grid;gap:6px;font-size:12px}
+.sg365-bar div{background:#e5e7eb;border-radius:999px;height:8px;overflow:hidden}
+.sg365-bar i{display:block;height:100%;background:#2563eb}
+.sg365-pending-grid{display:grid;gap:16px}
+.sg365-list-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+.sg365-status{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
+.sg365-status-overdue{background:#fee2e2;color:#b91c1c}
+.sg365-status-on-time{background:#ecfeff;color:#0e7490}
+.sg365-status-pending{background:#fef3c7;color:#92400e}
+.sg365-status-in-progress{background:#dbeafe;color:#1d4ed8}
+.sg365-email-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.sg365-email-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+.sg365-email-test{margin-top:24px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:16px;padding:16px}
+.sg365-email-test-status{margin-left:10px;font-weight:600}
+.sg365-service-types input,.sg365-service-types select{width:100%}
+.sg365-chip-list{list-style:none;display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0}
+.sg365-chip-list li{background:#f3f4f6;border-radius:999px;padding:4px 10px}
+.sg365-modal{position:fixed;inset:0;background:rgba(17,24,39,.6);display:flex;align-items:center;justify-content:center;z-index:10000}
+.sg365-modal-content{background:#fff;border-radius:16px;padding:20px;width:min(640px,92vw);max-height:90vh;overflow:auto}
+.sg365-modal-content form p{display:flex;flex-direction:column;gap:6px}
+.sg365-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+.sg365-multiselect{min-height:80px}
+.sg365-log-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.sg365-log-filters select,.sg365-log-filters input{max-width:200px}
