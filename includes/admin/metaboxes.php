@@ -1,0 +1,209 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+final class SG365_CP_Metaboxes {
+    private static $instance = null;
+
+    public static function instance(): self {
+        if ( null === self::$instance ) {
+            self::$instance = new self();
+            self::$instance->init();
+        }
+        return self::$instance;
+    }
+
+    private function init(): void {
+        add_action( 'add_meta_boxes', array( $this, 'register' ) );
+        add_action( 'save_post', array( $this, 'save' ), 10, 2 );
+    }
+
+    public function register(): void {
+        add_meta_box( 'sg365_client_meta', __( 'Client Details', 'sg365-client-portal' ), array( $this, 'client_box' ), 'sg365_client', 'normal', 'default' );
+        add_meta_box( 'sg365_site_meta', __( 'Site/Domain Details', 'sg365-client-portal' ), array( $this, 'site_box' ), 'sg365_site', 'normal', 'default' );
+        add_meta_box( 'sg365_project_meta', __( 'Project Details', 'sg365-client-portal' ), array( $this, 'project_box' ), 'sg365_project', 'normal', 'default' );
+        add_meta_box( 'sg365_worklog_meta', __( 'Work Log Details', 'sg365-client-portal' ), array( $this, 'worklog_box' ), 'sg365_worklog', 'normal', 'default' );
+        add_meta_box( 'sg365_staff_meta', __( 'Staff Details', 'sg365-client-portal' ), array( $this, 'staff_box' ), 'sg365_staff', 'normal', 'default' );
+        add_meta_box( 'sg365_salary_meta', __( 'Salary Sheet Details', 'sg365-client-portal' ), array( $this, 'salary_box' ), 'sg365_salary', 'normal', 'default' );
+    }
+
+    private function clients( int $selected = 0, string $name = '_sg365_client_id' ): void {
+        $items = get_posts( array( 'post_type' => 'sg365_client', 'numberposts' => 200, 'orderby' => 'title', 'order' => 'ASC' ) );
+        echo '<select class="widefat" name="' . esc_attr( $name ) . '">';
+        echo '<option value="0">' . esc_html__( '— Select —', 'sg365-client-portal' ) . '</option>';
+        foreach ( $items as $c ) {
+            printf('<option value="%d"%s>%s</option>', (int)$c->ID, selected($selected,(int)$c->ID,false), esc_html($c->post_title));
+        }
+        echo '</select>';
+    }
+
+    private function sites( int $selected = 0, int $client_id = 0 ): void {
+        $args = array( 'post_type'=>'sg365_site', 'numberposts'=>500, 'orderby'=>'title', 'order'=>'ASC' );
+        if ( $client_id ) { $args['meta_query'] = array( array('key'=>'_sg365_client_id','value'=>$client_id) ); }
+        $items = get_posts($args);
+        echo '<select class="widefat" name="_sg365_site_id">';
+        echo '<option value="0">' . esc_html__( '— Select —', 'sg365-client-portal' ) . '</option>';
+        foreach ( $items as $s ) {
+            printf('<option value="%d"%s>%s</option>', (int)$s->ID, selected($selected,(int)$s->ID,false), esc_html($s->post_title));
+        }
+        echo '</select>';
+    }
+
+    private function projects( int $selected = 0, int $client_id = 0 ): void {
+        $args = array( 'post_type'=>'sg365_project', 'numberposts'=>500, 'orderby'=>'title', 'order'=>'ASC' );
+        if ( $client_id ) { $args['meta_query'] = array( array('key'=>'_sg365_client_id','value'=>$client_id) ); }
+        $items = get_posts($args);
+        echo '<select class="widefat" name="_sg365_project_id">';
+        echo '<option value="0">' . esc_html__( '— Optional —', 'sg365-client-portal' ) . '</option>';
+        foreach ( $items as $p ) {
+            printf('<option value="%d"%s>%s</option>', (int)$p->ID, selected($selected,(int)$p->ID,false), esc_html($p->post_title));
+        }
+        echo '</select>';
+    }
+
+    public function client_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $user_id = (int) get_post_meta( $post->ID, '_sg365_user_id', true );
+        $phone = (string) get_post_meta( $post->ID, '_sg365_phone', true );
+        echo '<p><strong>' . esc_html__( 'Linked User', 'sg365-client-portal' ) . '</strong></p>';
+        $users = get_users( array( 'fields'=>array('ID','user_login','user_email') ) );
+        echo '<select class="widefat" name="_sg365_user_id"><option value="0">' . esc_html__( '— Select user —','sg365-client-portal') . '</option>';
+        foreach($users as $u){
+            printf('<option value="%d"%s>%s (%s)</option>', (int)$u->ID, selected($user_id,(int)$u->ID,false), esc_html($u->user_login), esc_html($u->user_email));
+        }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Phone', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input class="widefat" name="_sg365_phone" value="' . esc_attr($phone) . '" />';
+    }
+
+    public function site_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
+        $type = (string) get_post_meta( $post->ID, '_sg365_type', true );
+        $plan = (string) get_post_meta( $post->ID, '_sg365_plan', true );
+        echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
+        $this->clients($client_id);
+        echo '<p><strong>' . esc_html__( 'Service Type', 'sg365-client-portal' ) . '</strong></p>';
+        $types = array('maintenance'=>'Maintenance','development'=>'Development','security'=>'Security','seo'=>'SEO');
+        echo '<select class="widefat" name="_sg365_type">';
+        foreach($types as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($type,$k,false), esc_html($lbl)); }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Plan', 'sg365-client-portal' ) . '</strong></p>';
+        $plans = array('monthly'=>'Monthly','one_time'=>'One-time');
+        echo '<select class="widefat" name="_sg365_plan">';
+        foreach($plans as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($plan,$k,false), esc_html($lbl)); }
+        echo '</select>';
+    }
+
+    public function project_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
+        $ptype = (string) get_post_meta( $post->ID, '_sg365_project_type', true );
+        $amount = (string) get_post_meta( $post->ID, '_sg365_amount', true );
+        echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
+        $this->clients($client_id);
+        echo '<p><strong>' . esc_html__( 'Project Type', 'sg365-client-portal' ) . '</strong></p>';
+        $types = array('monthly'=>'Monthly (Plan)','one_time'=>'One-time');
+        echo '<select class="widefat" name="_sg365_project_type">';
+        foreach($types as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($ptype,$k,false), esc_html($lbl)); }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Amount (optional)', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input class="widefat" name="_sg365_amount" value="' . esc_attr($amount) . '" placeholder="15000" />';
+    }
+
+    public function worklog_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $client_id = (int) get_post_meta( $post->ID, '_sg365_client_id', true );
+        $site_id = (int) get_post_meta( $post->ID, '_sg365_site_id', true );
+        $project_id = (int) get_post_meta( $post->ID, '_sg365_project_id', true );
+        $cat = (string) get_post_meta( $post->ID, '_sg365_category', true );
+        $visible = (int) get_post_meta( $post->ID, '_sg365_visible_client', true );
+        $date = (string) get_post_meta( $post->ID, '_sg365_log_date', true );
+        if(!$date){ $date = current_time('Y-m-d'); }
+        echo '<p><strong>' . esc_html__( 'Client', 'sg365-client-portal' ) . '</strong></p>';
+        $this->clients($client_id);
+        echo '<p><strong>' . esc_html__( 'Domain/Site (required)', 'sg365-client-portal' ) . '</strong></p>';
+        $this->sites($site_id, $client_id);
+        echo '<p><strong>' . esc_html__( 'Project (optional)', 'sg365-client-portal' ) . '</strong></p>';
+        $this->projects($project_id, $client_id);
+        echo '<p><strong>' . esc_html__( 'Category', 'sg365-client-portal' ) . '</strong></p>';
+        $cats = array('development'=>'Development','security'=>'Security','bugfix'=>'Bug Fix','support'=>'Support','seo'=>'SEO','content'=>'Content');
+        echo '<select class="widefat" name="_sg365_category">';
+        foreach($cats as $k=>$lbl){ printf('<option value="%s"%s>%s</option>', esc_attr($k), selected($cat,$k,false), esc_html($lbl)); }
+        echo '</select>';
+        echo '<p><strong>' . esc_html__( 'Date', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="date" name="_sg365_log_date" value="' . esc_attr($date) . '" />';
+        echo '<p><label><input type="checkbox" name="_sg365_visible_client" value="1" ' . checked(1,$visible,false) . ' /> ' . esc_html__( 'Visible to client in My Account', 'sg365-client-portal' ) . '</label></p>';
+    }
+
+    public function staff_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $role = (string) get_post_meta( $post->ID, '_sg365_role', true );
+        $salary = (string) get_post_meta( $post->ID, '_sg365_monthly_salary', true );
+        echo '<p><strong>' . esc_html__( 'Role', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input class="widefat" name="_sg365_role" value="' . esc_attr($role) . '" placeholder="Developer" />';
+        echo '<p><strong>' . esc_html__( 'Monthly Salary', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input class="widefat" name="_sg365_monthly_salary" value="' . esc_attr($salary) . '" placeholder="25000" />';
+    }
+
+    public function salary_box( WP_Post $post ): void {
+        wp_nonce_field( 'sg365_cp_meta', 'sg365_cp_nonce' );
+        $month = (string) get_post_meta( $post->ID, '_sg365_month', true );
+        if(!$month){ $month = gmdate('Y-m'); }
+        $staff_id = (int) get_post_meta( $post->ID, '_sg365_staff_id', true );
+        $base = (string) get_post_meta( $post->ID, '_sg365_base', true );
+        $bonus = (string) get_post_meta( $post->ID, '_sg365_bonus', true );
+        $ded = (string) get_post_meta( $post->ID, '_sg365_deduction', true );
+        $paid = (int) get_post_meta( $post->ID, '_sg365_paid', true );
+        $note = (string) get_post_meta( $post->ID, '_sg365_note', true );
+
+        $staff = get_posts(array('post_type'=>'sg365_staff','numberposts'=>300,'orderby'=>'title','order'=>'ASC'));
+
+        echo '<p><strong>' . esc_html__( 'Month', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input type="month" name="_sg365_month" value="' . esc_attr($month) . '" />';
+        echo '<p><strong>' . esc_html__( 'Staff', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<select class="widefat" name="_sg365_staff_id"><option value="0">—</option>';
+        foreach($staff as $s){ printf('<option value="%d"%s>%s</option>', (int)$s->ID, selected($staff_id,(int)$s->ID,false), esc_html($s->post_title)); }
+        echo '</select>';
+
+        echo '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px">';
+        echo '<div><strong>Base</strong><input class="widefat" name="_sg365_base" value="' . esc_attr($base) . '"/></div>';
+        echo '<div><strong>Bonus</strong><input class="widefat" name="_sg365_bonus" value="' . esc_attr($bonus) . '"/></div>';
+        echo '<div><strong>Deduction/Advance</strong><input class="widefat" name="_sg365_deduction" value="' . esc_attr($ded) . '"/></div>';
+        echo '</div>';
+
+        echo '<p style="margin-top:10px"><label><input type="checkbox" name="_sg365_paid" value="1" ' . checked(1,$paid,false) . ' /> ' . esc_html__('Marked as paid','sg365-client-portal') . '</label></p>';
+        echo '<p><strong>' . esc_html__( 'Payment Note / UTR', 'sg365-client-portal' ) . '</strong></p>';
+        echo '<input class="widefat" name="_sg365_note" value="' . esc_attr($note) . '" placeholder="UTR / Cash / Bank..." />';
+    }
+
+    public function save( int $post_id, WP_Post $post ): void {
+        if ( wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) ) { return; }
+        if ( empty($_POST['sg365_cp_nonce']) || ! wp_verify_nonce( sanitize_text_field(wp_unslash($_POST['sg365_cp_nonce'])), 'sg365_cp_meta' ) ) { return; }
+        if ( ! current_user_can('sg365_cp_manage') ) { return; }
+
+        $map = array(
+            'sg365_client' => array('_sg365_user_id'=>'int','_sg365_phone'=>'text'),
+            'sg365_site' => array('_sg365_client_id'=>'int','_sg365_type'=>'text','_sg365_plan'=>'text'),
+            'sg365_project' => array('_sg365_client_id'=>'int','_sg365_project_type'=>'text','_sg365_amount'=>'money'),
+            'sg365_worklog' => array('_sg365_client_id'=>'int','_sg365_site_id'=>'int','_sg365_project_id'=>'int','_sg365_category'=>'text','_sg365_visible_client'=>'bool','_sg365_log_date'=>'text'),
+            'sg365_staff' => array('_sg365_role'=>'text','_sg365_monthly_salary'=>'money'),
+            'sg365_salary' => array('_sg365_month'=>'text','_sg365_staff_id'=>'int','_sg365_base'=>'money','_sg365_bonus'=>'money','_sg365_deduction'=>'money','_sg365_paid'=>'bool','_sg365_note'=>'text'),
+        );
+
+        if ( empty($map[$post->post_type]) ) { return; }
+
+        foreach($map[$post->post_type] as $key=>$type){
+            $val = $_POST[$key] ?? null;
+            if($type==='int'){ update_post_meta($post_id,$key, sg365_cp_clean_int($val)); }
+            elseif($type==='bool'){ update_post_meta($post_id,$key, sg365_cp_clean_bool($val)); }
+            elseif($type==='money'){ update_post_meta($post_id,$key, sg365_cp_clean_money($val)); }
+            else { update_post_meta($post_id,$key, sg365_cp_clean_text($val)); }
+        }
+
+        if ( 'sg365_worklog' === $post->post_type ) {
+            $client_id = (int) get_post_meta($post_id,'_sg365_client_id',true);
+            $client_user_id = $client_id ? sg365_cp_get_user_id_for_client($client_id) : 0;
+            update_post_meta($post_id,'_sg365_client_user_id',(int)$client_user_id);
+        }
+    }
+}

@@ -1,0 +1,16 @@
+.sg365-portal{margin-top:10px}
+.sg365-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.sg365-tab{display:inline-block;padding:8px 12px;border:1px solid #e5e7eb;border-radius:999px;text-decoration:none}
+.sg365-tab.is-active{background:#111827;color:#fff;border-color:#111827}
+.sg365-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.sg365-card{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}
+.sg365-card-title{font-weight:700;margin-bottom:6px}
+.sg365-badges{display:flex;gap:8px;flex-wrap:wrap}
+.sg365-badge{display:inline-block;font-size:12px;padding:4px 8px;border-radius:999px;background:#111827;color:#fff}
+.sg365-badge-soft{background:#f3f4f6;color:#111827}
+.sg365-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:10px 0 12px}
+.sg365-filters label{display:flex;gap:6px;align-items:center}
+.sg365-list{display:flex;flex-direction:column;gap:12px}
+.sg365-list-item{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}
+.sg365-li-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.sg365-li-meta{font-size:12px;color:#6b7280}
