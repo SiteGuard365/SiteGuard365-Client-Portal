@@ -20,6 +20,7 @@ final class SG365_CP_Plugin {
         add_action( 'init', array( $this, 'register_post_types' ) );
         add_action( 'init', array( $this, 'register_caps' ) );
         add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
+        add_action( 'admin_init', array( $this, 'maybe_upgrade' ) );
 
         if ( is_admin() ) {
             SG365_CP_Admin::instance();
@@ -32,10 +33,19 @@ final class SG365_CP_Plugin {
         self::instance()->register_post_types();
         flush_rewrite_rules();
         self::instance()->register_caps();
+        update_option( 'sg365_cp_version', SG365_CP_VERSION );
     }
 
     public static function deactivate(): void {
         flush_rewrite_rules();
+    }
+
+    public function maybe_upgrade(): void {
+        $stored = (string) get_option( 'sg365_cp_version', '1.0.0' );
+        if ( version_compare( $stored, SG365_CP_VERSION, '<' ) ) {
+            flush_rewrite_rules();
+            update_option( 'sg365_cp_version', SG365_CP_VERSION );
+        }
     }
 
     public function load_textdomain(): void {

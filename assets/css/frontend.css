@@ -5,6 +5,7 @@
 .sg365-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .sg365-card{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}
 .sg365-card-title{font-weight:700;margin-bottom:6px}
+.sg365-card-meta{font-size:13px;color:#475569;margin-bottom:6px}
 .sg365-badges{display:flex;gap:8px;flex-wrap:wrap}
 .sg365-badge{display:inline-block;font-size:12px;padding:4px 8px;border-radius:999px;background:#111827;color:#fff}
 .sg365-badge-soft{background:#f3f4f6;color:#111827}

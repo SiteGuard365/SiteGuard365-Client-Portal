@@ -53,3 +53,47 @@ function sg365_cp_month_key_from_input( string $ym ): string {
     }
     return gmdate( 'Y-m' );
 }
+
+function sg365_cp_get_service_types(): array {
+    $types = get_option( 'sg365_service_types', array() );
+    if ( empty( $types ) || ! is_array( $types ) ) {
+        $types = array(
+            'development' => array( 'label' => 'Development', 'staff' => array() ),
+            'security'    => array( 'label' => 'Security', 'staff' => array() ),
+            'seo'         => array( 'label' => 'SEO', 'staff' => array() ),
+            'maintenance' => array( 'label' => 'Maintenance', 'staff' => array() ),
+            'support'     => array( 'label' => 'Support', 'staff' => array() ),
+            'storage'     => array( 'label' => 'Storage', 'staff' => array() ),
+        );
+    }
+    return $types;
+}
+
+function sg365_cp_get_client_plan_type( int $client_id, int $user_id = 0 ): string {
+    $plan = (string) get_post_meta( $client_id, '_sg365_plan_type', true );
+    if ( $plan ) {
+        return $plan;
+    }
+    if ( $user_id && sg365_cp_is_woocommerce_active() ) {
+        $orders = wc_get_orders( array(
+            'customer_id' => $user_id,
+            'limit'       => 1,
+            'orderby'     => 'date',
+            'order'       => 'DESC',
+            'meta_key'    => '_sg365_plan_type',
+        ) );
+        if ( ! empty( $orders ) ) {
+            $order = $orders[0];
+            $meta  = (string) $order->get_meta( '_sg365_plan_type' );
+            if ( $meta ) {
+                return $meta;
+            }
+        }
+    }
+    return 'maintenance';
+}
+
+function sg365_cp_user_has_work_access( int $client_id, int $user_id = 0 ): bool {
+    $plan = sg365_cp_get_client_plan_type( $client_id, $user_id );
+    return in_array( $plan, array( 'salary', 'project' ), true );
+}
