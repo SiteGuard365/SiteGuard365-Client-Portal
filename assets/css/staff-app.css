@@ -1,0 +1,10 @@
+@import url("portal.css");
+
+.sg365-shell--staff .sg365-sidebar {
+  background: #111827;
+}
+
+.sg365-shell--staff .sg365-topbar__actions button {
+  background: #fef3c7;
+  color: #b45309;
+}
