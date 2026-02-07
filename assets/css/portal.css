@@ -1,0 +1,130 @@
+.sg365-shell {
+  display: flex;
+  min-height: 70vh;
+  background: #f7f9fc;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.sg365-sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: #fff;
+  padding: 24px 16px;
+}
+
+.sg365-sidebar__brand {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.sg365-sidebar__menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sg365-sidebar__menu li {
+  margin-bottom: 10px;
+}
+
+.sg365-sidebar__menu button {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.sg365-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sg365-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sg365-topbar__search input {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  min-width: 240px;
+}
+
+.sg365-topbar__actions button {
+  border: none;
+  background: #eef2ff;
+  color: #4338ca;
+  margin-left: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.sg365-content__inner {
+  padding: 24px;
+}
+
+.sg365-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.sg365-notifications {
+  position: relative;
+}
+
+.sg365-notifications__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.sg365-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.sg365-modal__content {
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+}
+
+.sg365-modal__content input,
+.sg365-modal__content textarea {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
