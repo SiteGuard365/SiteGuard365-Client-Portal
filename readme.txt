@@ -1,22 +1,32 @@
-=== SiteGuard365 Client Portal (Work Logs & Salary) ===
+=== SiteGuard365 Dashboard Suite ===
 Contributors: siteguard365
-Tags: client portal, work logs, salary, woocommerce my account
+Tags: client portal, staff dashboard, woocommerce
 Requires at least: 6.0
-Tested up to: 6.6
-Requires PHP: 7.4
+Tested up to: 6.5
+Requires PHP: 8.0
 Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Admin utility plugin to manage Clients, Sites/Domains, Projects, Work Logs, and Monthly Salary Sheets. Includes a WooCommerce My Account portal tab for clients to view their sites, visible work logs, projects, and payments.
+A Stripe-style client portal and staff dashboard for SiteGuard365.
+
+== Description ==
+
+SiteGuard365 Dashboard Suite provides a secure client portal and staff app powered by REST APIs and custom tables. Use the WooCommerce My Account endpoint or shortcodes to surface the experience.
 
 == Installation ==
-1. Upload the plugin folder to /wp-content/plugins/
-2. Activate the plugin.
-3. Create a Client and link it to a WooCommerce user.
-4. Add Sites/Domains and Work Logs for that client.
-5. Clients can view the portal in WooCommerce My Account (Settings -> enable if needed).
+
+1. Upload the `sg365-dashboard-suite` plugin folder to `/wp-content/plugins/`.
+2. Activate the plugin through the WordPress admin.
+3. Create the demo pages listed below.
+
+== Demo Pages ==
+
+* Create a page named "Client Portal" with the shortcode `[sg365_client_app]`.
+* Create a page named "Staff Dashboard" with the shortcode `[sg365_staff_app]`.
+* The WooCommerce My Account endpoint `/my-account/sg365-portal` is added automatically when WooCommerce is active.
 
 == Changelog ==
+
 = 1.0.0 =
-- Initial release.
+* Initial release of SiteGuard365 Dashboard Suite.

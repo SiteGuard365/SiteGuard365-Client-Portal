@@ -1,4 +1,40 @@
-.sg365-cp-wrap .sg365-cp-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin-top:16px}
-.sg365-cp-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.sg365-cp-card h3{margin:0 0 8px;font-size:14px}
-.sg365-cp-stat{font-size:26px;font-weight:700;margin:0}
+.sg365-admin {
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+.sg365-admin .sg365-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.sg365-admin label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+.sg365-admin input[type="text"],
+.sg365-admin input[type="number"],
+.sg365-admin input[type="url"],
+.sg365-admin input[type="password"] {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+}
+.sg365-secret-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.sg365-secret-field input {
+  flex: 1;
+}
+.sg365-menu-preview {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px dashed #cbd5f5;
+}

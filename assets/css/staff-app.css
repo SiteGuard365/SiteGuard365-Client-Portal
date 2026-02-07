@@ -1,0 +1,37 @@
+.sg365-app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 80vh;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.sg365-topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #111827;
+  color: #fff;
+}
+.sg365-search input {
+  width: 320px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #fff;
+}
+.sg365-sidebar {
+  background: #111827;
+  color: #cbd5f5;
+  padding: 20px;
+}
+.sg365-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
