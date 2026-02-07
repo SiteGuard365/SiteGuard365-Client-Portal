@@ -22,6 +22,9 @@ class SG365_Settings {
 			'brand_name'                => 'SiteGuard365',
 			'help_url'                  => 'https://siteguard365.com/support',
 			'notification_poll_interval'=> 20,
+			'smtp_password'             => '',
+			'api_token'                 => '',
+			'webhook_secret'            => '',
 			'client_menu'               => array(
 				array( 'label' => 'Dashboard', 'icon' => 'dashicons-dashboard', 'key' => 'dashboard', 'enabled' => true ),
 				array( 'label' => 'Sites', 'icon' => 'dashicons-admin-site', 'key' => 'sites', 'enabled' => true ),

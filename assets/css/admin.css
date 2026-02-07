@@ -16,10 +16,20 @@
   font-weight: 600;
 }
 .sg365-admin input[type="text"],
-.sg365-admin input[type="number"] {
+.sg365-admin input[type="number"],
+.sg365-admin input[type="url"],
+.sg365-admin input[type="password"] {
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #cbd5f5;
+}
+.sg365-secret-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.sg365-secret-field input {
+  flex: 1;
 }
 .sg365-menu-preview {
   background: #f8fafc;

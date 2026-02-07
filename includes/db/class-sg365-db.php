@@ -33,6 +33,15 @@ class SG365_DB {
 		return ! empty( $assignment );
 	}
 
+	public static function get_assigned_client_ids( $staff_user_id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'sg365_staff_assignments';
+		$ids = $wpdb->get_col(
+			$wpdb->prepare( "SELECT client_id FROM {$table} WHERE staff_user_id = %d", $staff_user_id )
+		);
+		return array_map( 'absint', $ids );
+	}
+
 	public static function get_client_sites( $client_id ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'sg365_sites';
@@ -101,24 +110,48 @@ class SG365_DB {
 		);
 	}
 
-	public static function get_staff_sites( $staff_user_id ) {
+	public static function get_all_clients() {
 		global $wpdb;
-		$assignments = $wpdb->prefix . 'sg365_staff_assignments';
-		$sites = $wpdb->prefix . 'sg365_sites';
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT s.* FROM {$sites} s INNER JOIN {$assignments} a ON s.client_id = a.client_id WHERE a.staff_user_id = %d AND s.archived_at IS NULL",
-				$staff_user_id
-			)
-		);
+		$table = $wpdb->prefix . 'sg365_clients';
+		return $wpdb->get_results( "SELECT * FROM {$table}" );
 	}
 
-	public static function get_staff_worklogs( $staff_user_id ) {
+	public static function get_all_client_ids() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'sg365_clients';
+		$ids = $wpdb->get_col( "SELECT id FROM {$table}" );
+		return array_map( 'absint', $ids );
+	}
+
+	public static function get_staff_sites( $client_ids ) {
+		global $wpdb;
+		$sites = $wpdb->prefix . 'sg365_sites';
+		if ( empty( $client_ids ) ) {
+			return array();
+		}
+		$placeholders = implode( ',', array_fill( 0, count( $client_ids ), '%d' ) );
+		$query = $wpdb->prepare(
+			"SELECT * FROM {$sites} WHERE client_id IN ({$placeholders}) AND archived_at IS NULL",
+			$client_ids
+		);
+		return $wpdb->get_results( $query );
+	}
+
+	public static function get_staff_worklogs( $staff_user_id, $client_ids = array() ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'sg365_worklogs';
-		return $wpdb->get_results(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE staff_user_id = %d AND archived_at IS NULL ORDER BY log_date DESC", $staff_user_id )
+		if ( empty( $client_ids ) ) {
+			return $wpdb->get_results(
+				$wpdb->prepare( "SELECT * FROM {$table} WHERE staff_user_id = %d AND archived_at IS NULL ORDER BY log_date DESC", $staff_user_id )
+			);
+		}
+		$placeholders = implode( ',', array_fill( 0, count( $client_ids ), '%d' ) );
+		$params = array_merge( array( $staff_user_id ), $client_ids );
+		$query = $wpdb->prepare(
+			"SELECT * FROM {$table} WHERE staff_user_id = %d AND client_id IN ({$placeholders}) AND archived_at IS NULL ORDER BY log_date DESC",
+			$params
 		);
+		return $wpdb->get_results( $query );
 	}
 
 	public static function create_worklog( $data ) {
@@ -144,16 +177,18 @@ class SG365_DB {
 		return $wpdb->insert_id;
 	}
 
-	public static function get_staff_support_requests( $staff_user_id ) {
+	public static function get_staff_support_requests( $client_ids ) {
 		global $wpdb;
-		$assignments = $wpdb->prefix . 'sg365_staff_assignments';
 		$table = $wpdb->prefix . 'sg365_support_requests';
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT r.* FROM {$table} r INNER JOIN {$assignments} a ON r.client_id = a.client_id WHERE a.staff_user_id = %d AND r.archived_at IS NULL",
-				$staff_user_id
-			)
+		if ( empty( $client_ids ) ) {
+			return array();
+		}
+		$placeholders = implode( ',', array_fill( 0, count( $client_ids ), '%d' ) );
+		$query = $wpdb->prepare(
+			"SELECT * FROM {$table} WHERE client_id IN ({$placeholders}) AND archived_at IS NULL",
+			$client_ids
 		);
+		return $wpdb->get_results( $query );
 	}
 
 	public static function assign_support_request( $request_id, $staff_user_id ) {

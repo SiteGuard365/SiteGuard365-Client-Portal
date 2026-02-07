@@ -217,6 +217,21 @@ class SG365_Rest {
 		return is_user_logged_in() && ( current_user_can( 'sg365_view_staff_app' ) || current_user_can( 'manage_options' ) );
 	}
 
+	private function get_access_context() {
+		$user_id = get_current_user_id();
+		if ( current_user_can( 'manage_options' ) ) {
+			return array( 'mode' => 'admin', 'client_id' => null, 'client_ids' => array() );
+		}
+
+		$client_id = SG365_DB::get_client_id_for_user( $user_id );
+		if ( $client_id ) {
+			return array( 'mode' => 'client', 'client_id' => absint( $client_id ), 'client_ids' => array( absint( $client_id ) ) );
+		}
+
+		$assigned = SG365_DB::get_assigned_client_ids( $user_id );
+		return array( 'mode' => 'staff', 'client_id' => null, 'client_ids' => $assigned );
+	}
+
 	private function respond( $data = array(), $meta = array() ) {
 		return rest_ensure_response(
 			array(
@@ -243,7 +258,11 @@ class SG365_Rest {
 	}
 
 	public function client_dashboard() {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		$data = array(
 			'client_id' => $client_id,
 			'sites'     => SG365_DB::get_client_sites( $client_id ),
@@ -253,33 +272,53 @@ class SG365_Rest {
 	}
 
 	public function client_sites() {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		return $this->respond( SG365_DB::get_client_sites( $client_id ) );
 	}
 
 	public function client_projects() {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		return $this->respond( SG365_DB::get_client_projects( $client_id ) );
 	}
 
 	public function client_worklogs() {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		return $this->respond( SG365_DB::get_client_worklogs( $client_id ) );
 	}
 
 	public function client_support_list() {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		return $this->respond( SG365_DB::get_client_support_requests( $client_id ) );
 	}
 
 	public function client_support_create( WP_REST_Request $request ) {
-		$client_id = SG365_DB::get_client_id_for_user( get_current_user_id() );
+		$context = $this->get_access_context();
+		if ( empty( $context['client_id'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Client access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		$client_id = $context['client_id'];
 		$subject = $request->get_param( 'subject' );
 		$message = $request->get_param( 'message' );
 		$priority = $request->get_param( 'priority' ) ?: 'normal';
 
 		$request_id = SG365_DB::create_support_request( $client_id, get_current_user_id(), $subject, $message, $priority );
-		SG365_Audit::log( 'create', 'support_request', $request_id, array( 'subject' => $subject ) );
+		SG365_Audit::log( 'create', 'support_request', $request_id, array(), array( 'subject' => $subject ) );
 		return $this->respond( array( 'id' => $request_id ) );
 	}
 
@@ -297,26 +336,52 @@ class SG365_Rest {
 
 	public function staff_dashboard() {
 		$user_id = get_current_user_id();
+		$context = $this->get_access_context();
+		$client_ids = ( 'admin' === $context['mode'] ) ? array() : $context['client_ids'];
+		if ( 'admin' !== $context['mode'] && empty( $client_ids ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Staff access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
 		$data = array(
 			'due_today'  => array(),
 			'overdue'    => array(),
 			'new_tickets'=> array(),
 			'activity'   => array(),
-			'worklogs'   => SG365_DB::get_staff_worklogs( $user_id ),
+			'worklogs'   => SG365_DB::get_staff_worklogs( $user_id, $client_ids ),
 		);
 		return $this->respond( $data );
 	}
 
 	public function staff_clients() {
+		$context = $this->get_access_context();
+		if ( 'admin' === $context['mode'] ) {
+			return $this->respond( SG365_DB::get_all_clients() );
+		}
+		if ( empty( $context['client_ids'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Staff access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
 		return $this->respond( SG365_DB::get_staff_clients( get_current_user_id() ) );
 	}
 
 	public function staff_sites() {
-		return $this->respond( SG365_DB::get_staff_sites( get_current_user_id() ) );
+		$context = $this->get_access_context();
+		if ( 'admin' === $context['mode'] ) {
+			return $this->respond( SG365_DB::get_staff_sites( SG365_DB::get_all_client_ids() ) );
+		}
+		if ( empty( $context['client_ids'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Staff access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		return $this->respond( SG365_DB::get_staff_sites( $context['client_ids'] ) );
 	}
 
 	public function staff_worklogs() {
-		return $this->respond( SG365_DB::get_staff_worklogs( get_current_user_id() ) );
+		$context = $this->get_access_context();
+		if ( 'admin' === $context['mode'] ) {
+			return $this->respond( SG365_DB::get_staff_worklogs( get_current_user_id() ) );
+		}
+		if ( empty( $context['client_ids'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Staff access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		return $this->respond( SG365_DB::get_staff_worklogs( get_current_user_id(), $context['client_ids'] ) );
 	}
 
 	public function staff_worklogs_create( WP_REST_Request $request ) {
@@ -339,19 +404,26 @@ class SG365_Rest {
 		}
 
 		$worklog_id = SG365_DB::create_worklog( $data );
-		SG365_Audit::log( 'create', 'worklog', $worklog_id, array( 'title' => $data['title'] ) );
+		SG365_Audit::log( 'create', 'worklog', $worklog_id, array(), array( 'title' => $data['title'] ) );
 		return $this->respond( array( 'id' => $worklog_id ) );
 	}
 
 	public function staff_support_list() {
-		return $this->respond( SG365_DB::get_staff_support_requests( get_current_user_id() ) );
+		$context = $this->get_access_context();
+		if ( 'admin' === $context['mode'] ) {
+			return $this->respond( SG365_DB::get_staff_support_requests( SG365_DB::get_all_client_ids() ) );
+		}
+		if ( empty( $context['client_ids'] ) ) {
+			return new WP_Error( 'sg365_forbidden', __( 'Staff access required.', 'sg365-dashboard-suite' ), array( 'status' => 403 ) );
+		}
+		return $this->respond( SG365_DB::get_staff_support_requests( $context['client_ids'] ) );
 	}
 
 	public function staff_support_assign( WP_REST_Request $request ) {
 		$request_id = absint( $request->get_param( 'request_id' ) );
 		$staff_id = absint( $request->get_param( 'staff_user_id' ) );
 		SG365_DB::assign_support_request( $request_id, $staff_id );
-		SG365_Audit::log( 'assign', 'support_request', $request_id, array( 'staff_user_id' => $staff_id ) );
+		SG365_Audit::log( 'assign', 'support_request', $request_id, array(), array( 'staff_user_id' => $staff_id ) );
 		return $this->respond( array( 'id' => $request_id ) );
 	}
 

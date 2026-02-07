@@ -21,6 +21,10 @@ class SG365_Admin_UI {
 					<?php esc_html_e( 'Brand Name', 'sg365-dashboard-suite' ); ?>
 					<input type="text" id="sg365-brand-name" value="<?php echo esc_attr( $settings['brand_name'] ); ?>" />
 				</label>
+				<label>
+					<?php esc_html_e( 'Help Link', 'sg365-dashboard-suite' ); ?>
+					<input type="url" id="sg365-help-url" value="<?php echo esc_attr( $settings['help_url'] ); ?>" />
+				</label>
 			</div>
 
 			<div class="sg365-card">
@@ -28,6 +32,31 @@ class SG365_Admin_UI {
 				<label>
 					<?php esc_html_e( 'Poll Interval (seconds)', 'sg365-dashboard-suite' ); ?>
 					<input type="number" min="5" id="sg365-notification-interval" value="<?php echo esc_attr( $settings['notification_poll_interval'] ); ?>" />
+				</label>
+			</div>
+
+			<div class="sg365-card">
+				<h2><?php esc_html_e( 'Integrations', 'sg365-dashboard-suite' ); ?></h2>
+				<label>
+					<?php esc_html_e( 'SMTP Password', 'sg365-dashboard-suite' ); ?>
+					<div class="sg365-secret-field">
+						<input type="password" id="sg365-smtp-password" value="<?php echo $settings['smtp_password'] ? esc_attr__( '••••••', 'sg365-dashboard-suite' ) : ''; ?>" />
+						<button type="button" class="button" data-secret="smtp_password"><?php esc_html_e( 'Reveal', 'sg365-dashboard-suite' ); ?></button>
+					</div>
+				</label>
+				<label>
+					<?php esc_html_e( 'API Token', 'sg365-dashboard-suite' ); ?>
+					<div class="sg365-secret-field">
+						<input type="password" id="sg365-api-token" value="<?php echo $settings['api_token'] ? esc_attr__( '••••••', 'sg365-dashboard-suite' ) : ''; ?>" />
+						<button type="button" class="button" data-secret="api_token"><?php esc_html_e( 'Reveal', 'sg365-dashboard-suite' ); ?></button>
+					</div>
+				</label>
+				<label>
+					<?php esc_html_e( 'Webhook Secret', 'sg365-dashboard-suite' ); ?>
+					<div class="sg365-secret-field">
+						<input type="password" id="sg365-webhook-secret" value="<?php echo $settings['webhook_secret'] ? esc_attr__( '••••••', 'sg365-dashboard-suite' ) : ''; ?>" />
+						<button type="button" class="button" data-secret="webhook_secret"><?php esc_html_e( 'Reveal', 'sg365-dashboard-suite' ); ?></button>
+					</div>
 				</label>
 			</div>
 
